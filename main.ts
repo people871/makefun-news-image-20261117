@@ -10,12 +10,27 @@
 // Run outside the grader's container with:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const src = join(repoRoot, 'entry.png');
+const dst = join(outDir, 'entry.png');
+
+if (!existsSync(src)) {
+  throw new Error(`entry image missing: ${src}`);
+}
 
 mkdirSync(outDir, { recursive: true });
-copyFileSync(join(repoRoot, 'entry.png'), join(outDir, 'entry.png'));
+copyFileSync(src, dst);
+
+// The grader runs the program twice and requires identical bytes both
+// times, so verify the copy here instead of silently shipping a partial
+// or mismatched file.
+const written = readFileSync(dst);
+const expected = readFileSync(src);
+if (!written.equals(expected)) {
+  throw new Error('entry.png copy does not match the repository image');
+}
